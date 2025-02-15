@@ -1,0 +1,8 @@
+web3
+requests
+pandas
+python-dotenv
+boto3
+snowflake-connector-python[pandas]
+watchtower
+schedule
