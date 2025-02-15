@@ -222,11 +222,8 @@ def fetch_transform_store_block_trace(rpc_url, rpc_number, block_numbers, s3, bu
 
 # Multi thread fetch, transform and store block traces for batches of blocks instead of a single block at a time
 def multi_thread_fetch_transform_store_block_trace(s3, bucket_name, prefix, rpc_url, rpc_number, blocks_list):
-    num_cpus = cpu_count()
-    logger.info(f"Number of CPUs available: {num_cpus}")
-
     # Group blocks into batches of batch_size
-    batch_size = 20
+    batch_size = 10
     block_batches = [blocks_list[i:i+batch_size] for i in range(0, len(blocks_list), batch_size)]
 
     start_time = time.time()

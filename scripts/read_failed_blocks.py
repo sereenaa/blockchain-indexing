@@ -32,5 +32,5 @@ def read_failed_blocks(s3, bucket_name, key):
             raise
 
 # Usage:
-for failed_block in read_failed_blocks(s3, BUCKET_NAME, 'failed_blocks.jsonl.gz'):
+for failed_block in read_failed_blocks(s3, BUCKET_NAME, 'failed_blocks_0.jsonl.gz'):
     print(f"Block {failed_block['block']}")
