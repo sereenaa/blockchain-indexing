@@ -1,3 +1,4 @@
+# usage: python -m scripts.read_failed_blocks
 
 import json
 import gzip
@@ -32,5 +33,13 @@ def read_failed_blocks(s3, bucket_name, key):
             raise
 
 # Usage:
+failed_blocks = []
 for failed_block in read_failed_blocks(s3, BUCKET_NAME, 'failed_blocks_0.jsonl.gz'):
-    print(f"Block {failed_block['block']}")
+    failed_blocks.append(failed_block)
+
+print(len(failed_blocks))
+
+# write to file
+with open('data/failed_blocks_0.jsonl', 'w') as f:
+    for failed_block in failed_blocks:
+        f.write(json.dumps(failed_block) + '\n')
