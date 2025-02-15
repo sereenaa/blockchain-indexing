@@ -227,7 +227,7 @@ def multi_thread_fetch_transform_store_block_trace(s3, bucket_name, prefix, rpc_
     block_batches = [blocks_list[i:i+batch_size] for i in range(0, len(blocks_list), batch_size)]
 
     start_time = time.time()
-    with ThreadPoolExecutor(max_workers=20) as executor:
+    with ThreadPoolExecutor(max_workers=30) as executor:
         future_to_blocks = {executor.submit(fetch_transform_store_block_trace, rpc_url, rpc_number, batch, s3, bucket_name, prefix): batch for batch in block_batches}
         for future in as_completed(future_to_blocks):
             try:
