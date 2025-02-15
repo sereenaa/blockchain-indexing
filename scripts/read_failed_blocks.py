@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 from io import BytesIO
 from botocore.exceptions import ClientError
-
+from config.aws_config import BUCKET_NAME, S3_PREFIX
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,7 +14,6 @@ load_dotenv()
 
 # S3 connection details
 s3 = boto3.client('s3')
-bucket_name = os.getenv("BUCKET_NAME")
 
 def read_failed_blocks(s3, bucket_name, key):
     try:
@@ -33,5 +32,5 @@ def read_failed_blocks(s3, bucket_name, key):
             raise
 
 # Usage:
-for failed_block in read_failed_blocks(s3, bucket_name, 'failed_blocks.jsonl.gz'):
+for failed_block in read_failed_blocks(s3, BUCKET_NAME, 'failed_blocks.jsonl.gz'):
     print(f"Block {failed_block['block']}")

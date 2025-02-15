@@ -11,13 +11,13 @@ from datetime import datetime
 
 from utils.util import *
 from utils.process_data import *
+from config.snowflake_config import TABLE_NAME
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Snowflake connection details
 secret = get_secret(user='notnotsez-peter')
-table_name = os.getenv("TABLE_NAME")
 
 # Configure logging
 logs_folder = 'logs'
@@ -82,7 +82,7 @@ def main(batch_size=100, rpc_number=0):
 
             try:
                 blocks_list = list(range(range_start_block, range_end_block))
-                fetch_and_push_raw_opcodes_for_block_range(secret, table_name, rpc_url, rpc_number, blocks_list)
+                fetch_and_push_raw_opcodes_for_block_range(secret, TABLE_NAME, rpc_url, rpc_number, blocks_list)
             except Exception as e:
                 reprocess = True
                 error_msg = f"Error fetching or pushing data for block range {range_start_block}-{range_end_block}: {e}"
@@ -113,7 +113,7 @@ def main(batch_size=100, rpc_number=0):
         if len(global_failed_blocks_list_prev) < 1000:
             try:
                 logger.info("Main script finished running, now processing failed blocks...")
-                fetch_and_push_raw_opcodes_for_block_range(secret, table_name, rpc_url, rpc_number, global_failed_blocks_list_prev)
+                fetch_and_push_raw_opcodes_for_block_range(secret, TABLE_NAME, rpc_url, rpc_number, global_failed_blocks_list_prev)
             except Exception as e:
                 error_msg = f"Error fetching or pushing data for failed blocks retry list: {e}"
                 logger.error(error_msg)

@@ -12,18 +12,17 @@ import sqlite3
 from utils.util import *
 from utils.process_data import *
 from config.logger_config import logger  # Import the logger
+from config.aws_config import BUCKET_NAME, S3_PREFIX
+from config.snowflake_config import TABLE_NAME
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Snowflake connection details
 secret = get_secret(user='notnotsez-peter')
-table_name = os.getenv("TABLE_NAME")
 
 # S3 connection details
 s3 = boto3.client('s3')
-BUCKET_NAME = os.getenv("BUCKET_NAME")
-S3_PREFIX = os.getenv("S3_PREFIX")
 
 # Main function to fetch and store recent blocks
 def main(run_strategy, start_block=None, end_block=None, batch_size=100, rpc_number=0):
@@ -45,7 +44,7 @@ def main(run_strategy, start_block=None, end_block=None, batch_size=100, rpc_num
 
             # Fetch the latest block number from Snowflake
             try:
-                latest_snowflake_block_number = fetch_latest_block_number(secret, 'STAGING', table_name)
+                latest_snowflake_block_number = fetch_latest_block_number(secret, 'STAGING', TABLE_NAME)
                 logger.info(f"Latest block number from Snowflake: {str(latest_snowflake_block_number)}")
             except Exception as e:
                 error_msg = f"Error fetching latest block numbers from Snowflake: {e}"
