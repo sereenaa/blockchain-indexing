@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import logging
 import os
 import platform
+import random
 import time
 import watchtower
 from web3 import Web3
@@ -82,7 +83,8 @@ def main(run_strategy, start_block=None, end_block=None, batch_size=100, rpc_num
                 
                 # Exponential backoff if the block range is the same as the previous one
                 if current_block_range == previous_block_range:
-                    time.sleep(sleep_time)
+                    jitter = random.uniform(0.5, 1.5)  # Random factor between 0.5x and 1.5x
+                    time.sleep(sleep_time * jitter)
                     sleep_time *= 2  # Double the sleep time for the next retry
                 else:
                     sleep_time = 1  # Reset sleep time if the block range is different
