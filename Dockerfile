@@ -32,4 +32,6 @@ EXPOSE 80
 # CMD ["/app/run_scripts.sh"]
 
 # Run the specified Python script with the given arguments when the container launches
-CMD ["python", "main.py", "historical", "62195329", "62225329", "200", "0"]
+# python, main.py, run_strategy, start_block, end_block, batch_size, rpc_number
+# DONT FORGET TO CHANGE THE RPC NUMBER
+CMD ["python", "main.py", "historical", "62195329", "62225329", "200", "1"]
