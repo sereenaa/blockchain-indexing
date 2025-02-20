@@ -9,6 +9,14 @@
         {
           "name": "RPC_URL_0",
           "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:796973488332:secret:arbitrum-nova-alchemy-rpc:RPC_URL_0::"
+        },
+        {
+          "name": "RPC_URL_1",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:796973488332:secret:arbitrum-nova-alchemy-rpc:RPC_URL_1::"
+        },
+        {
+          "name": "RPC_URL_2",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:796973488332:secret:arbitrum-nova-alchemy-rpc:RPC_URL_2::"
         }
       ],
       "essential": true,
