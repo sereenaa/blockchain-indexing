@@ -4,6 +4,7 @@ import io
 from io import BytesIO
 import json
 import gzip
+import gc
 from os import cpu_count
 import pandas as pd
 import requests 
@@ -183,6 +184,8 @@ def fetch_transform_store_block_trace(rpc_url, rpc_number, block_numbers, s3, bu
     buffer = io.BytesIO()
     merged_df.to_parquet(buffer, index=False)
     s3.put_object(Bucket=bucket_name, Key=s3_key, Body=buffer.getvalue())
+    buffer.close()  # Avoid memory leak
+    del buffer  # Avoid memory leak
 
     # Append failed blocks in a zipped json file in S3
     if failed_blocks:
@@ -214,6 +217,8 @@ def fetch_transform_store_block_trace(rpc_url, rpc_number, block_numbers, s3, bu
 
         buffer.seek(0)
         s3.put_object(Bucket=bucket_name, Key=failed_blocks_key, Body=buffer.getvalue())
+        buffer.close()  # Avoid memory leak
+        del buffer  # Avoid memory leak
 
         logger.info(f"Updated failed_blocks_{rpc_number}.jsonl.gz in S3 with {len(new_data)} new unique failed blocks")
 
@@ -223,7 +228,7 @@ def fetch_transform_store_block_trace(rpc_url, rpc_number, block_numbers, s3, bu
 # Multi thread fetch, transform and store block traces for batches of blocks instead of a single block at a time
 def multi_thread_fetch_transform_store_block_trace(s3, bucket_name, prefix, rpc_url, rpc_number, blocks_list):
     # Group blocks into batches of batch_size
-    batch_size = 10
+    batch_size = 5
     block_batches = [blocks_list[i:i+batch_size] for i in range(0, len(blocks_list), batch_size)]
 
     start_time = time.time()
@@ -232,6 +237,8 @@ def multi_thread_fetch_transform_store_block_trace(s3, bucket_name, prefix, rpc_
         for future in as_completed(future_to_blocks):
             try:
                 success, block_numbers = future.result(timeout=130)
+                gargage_collected = gc.collect() 
+                logger.info(f"Garbage collected: {gargage_collected}")
                 if success:
                     logger.info(f'Blocks {min(block_numbers)} to {max(block_numbers)} have been processed and stored by rpc {rpc_number} to S3 bucket {bucket_name} with prefix {prefix}')
                 else:
@@ -240,5 +247,7 @@ def multi_thread_fetch_transform_store_block_trace(s3, bucket_name, prefix, rpc_
                 logger.error(f"TimeoutError for blocks {min(future_to_blocks[future])} to {max(future_to_blocks[future])} with rpc {rpc_number}")
             except Exception as e:
                 logger.error(f"Exception occurred for blocks {min(future_to_blocks[future])} to {max(future_to_blocks[future])} with rpc {rpc_number}: {e}")
+    
+    gc.collect() # Final garbage collection
     end_time = time.time()
     logger.info(f"Time taken to fetch, transform, and store traces for {str(len(blocks_list))} blocks with rpc {rpc_number}: {end_time - start_time:.2f} seconds")
