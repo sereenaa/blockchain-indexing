@@ -237,8 +237,6 @@ def multi_thread_fetch_transform_store_block_trace(s3, bucket_name, prefix, rpc_
         for future in as_completed(future_to_blocks):
             try:
                 success, block_numbers = future.result(timeout=130)
-                gargage_collected = gc.collect() 
-                logger.info(f"Garbage collected: {gargage_collected}")
                 if success:
                     logger.info(f'Blocks {min(block_numbers)} to {max(block_numbers)} have been processed and stored by rpc {rpc_number} to S3 bucket {bucket_name} with prefix {prefix}')
                 else:
@@ -248,6 +246,7 @@ def multi_thread_fetch_transform_store_block_trace(s3, bucket_name, prefix, rpc_
             except Exception as e:
                 logger.error(f"Exception occurred for blocks {min(future_to_blocks[future])} to {max(future_to_blocks[future])} with rpc {rpc_number}: {e}")
     
-    gc.collect() # Final garbage collection
+    garbage_collected = gc.collect()
+    logger.info(f"Garbage collected: {garbage_collected}")
     end_time = time.time()
     logger.info(f"Time taken to fetch, transform, and store traces for {str(len(blocks_list))} blocks with rpc {rpc_number}: {end_time - start_time:.2f} seconds")
