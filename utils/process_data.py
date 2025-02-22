@@ -132,6 +132,7 @@ def fetch_transform_store_block_trace(rpc_url, rpc_number, block_numbers, s3, bu
                 response = requests.post(rpc_url, json=payload, timeout=60)
                 response.raise_for_status()
                 trace = response.json()
+                response = None # Allow response object to be garbage collected
                 
                 # Transform data
                 if 'result' in trace:
@@ -181,11 +182,14 @@ def fetch_transform_store_block_trace(rpc_url, rpc_number, block_numbers, s3, bu
     start_block = min(block_numbers)
     end_block = max(block_numbers)
     s3_key = f"{prefix}{start_block}_{end_block}.parquet"
-    buffer = io.BytesIO()
-    merged_df.to_parquet(buffer, index=False)
-    s3.put_object(Bucket=bucket_name, Key=s3_key, Body=buffer.getvalue())
-    buffer.close()  # Avoid memory leak
-    del buffer  # Avoid memory leak
+    # buffer = io.BytesIO()
+    # merged_df.to_parquet(buffer, index=False)
+    # s3.put_object(Bucket=bucket_name, Key=s3_key, Body=buffer.getvalue())
+    # buffer.close()  # Avoid memory leak
+    # del buffer
+    with io.BytesIO() as buffer:
+        merged_df.to_parquet(buffer, index=False)
+        s3.put_object(Bucket=bucket_name, Key=s3_key, Body=buffer.getvalue())
 
     # Append failed blocks in a zipped json file in S3
     if failed_blocks:
@@ -209,20 +213,36 @@ def fetch_transform_store_block_trace(rpc_url, rpc_number, block_numbers, s3, bu
 
         # Combine existing content with new data
         combined_content = existing_content + "".join(new_data)
+        del existing_content
         
         # Compress and store the updated content back to S3
-        buffer = BytesIO()
-        with gzip.GzipFile(fileobj=buffer, mode='w') as gz:
-            gz.write(combined_content.encode('utf-8'))
-
-        buffer.seek(0)
-        s3.put_object(Bucket=bucket_name, Key=failed_blocks_key, Body=buffer.getvalue())
-        buffer.close()  # Avoid memory leak
-        del buffer  # Avoid memory leak
+        # buffer = BytesIO()
+        # with gzip.GzipFile(fileobj=buffer, mode='w') as gz:
+        #     gz.write(combined_content.encode('utf-8'))
+        # buffer.seek(0)
+        # s3.put_object(Bucket=bucket_name, Key=failed_blocks_key, Body=buffer.getvalue())
+        # buffer.close()  # Avoid memory leak
+        # del buffer  # Avoid memory leak
+        
+        # Compress and store using context managers
+        with io.BytesIO() as buffer:
+            with gzip.GzipFile(fileobj=buffer, mode='w') as gz:
+                gz.write(combined_content.encode('utf-8'))
+            buffer.seek(0)
+            s3.put_object(Bucket=bucket_name, Key=failed_blocks_key, Body=buffer.getvalue())
 
         logger.info(f"Updated failed_blocks_{rpc_number}.jsonl.gz in S3 with {len(new_data)} new unique failed blocks")
 
 
+    # Clean memory
+    del all_data
+    del failed_blocks
+    del transaction_agg
+    del opcode_agg
+    del df
+    del merged_df
+    gc.collect()
+    
     return True, block_numbers
 
 # Multi thread fetch, transform and store block traces for batches of blocks instead of a single block at a time
@@ -232,7 +252,7 @@ def multi_thread_fetch_transform_store_block_trace(s3, bucket_name, prefix, rpc_
     block_batches = [blocks_list[i:i+batch_size] for i in range(0, len(blocks_list), batch_size)]
 
     start_time = time.time()
-    with ThreadPoolExecutor(max_workers=20) as executor:
+    with ThreadPoolExecutor(max_workers=15) as executor:
         future_to_blocks = {executor.submit(fetch_transform_store_block_trace, rpc_url, rpc_number, batch, s3, bucket_name, prefix): batch for batch in block_batches}
         for future in as_completed(future_to_blocks):
             try:
