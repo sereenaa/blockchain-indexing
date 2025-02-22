@@ -161,6 +161,7 @@ def fetch_transform_store_block_trace(rpc_url, rpc_number, block_numbers, s3, bu
 
     # Process all collected data
     df = pd.DataFrame(all_data)
+    del all_data
     
     # First aggregation level: Aggregate by TRANSACTION_HASH to get MAX_GAS and MIN_GAS
     transaction_agg = df.groupby(['BLOCK_NUMBER', 'TRANSACTION_HASH']).agg(
@@ -174,19 +175,18 @@ def fetch_transform_store_block_trace(rpc_url, rpc_number, block_numbers, s3, bu
         SUM_GAS_COST=('GAS_COST', 'sum'),
         STATE_GROWTH_COUNT=('STATE_GROWTH_COUNT', 'sum')
     ).reset_index()
+    del df
 
     # Merge the two aggregation results
     merged_df = pd.merge(transaction_agg, opcode_agg, on=['BLOCK_NUMBER', 'TRANSACTION_HASH'])
+    del transaction_agg
+    del opcode_agg
     
     # Store transformed data in S3
     start_block = min(block_numbers)
     end_block = max(block_numbers)
     s3_key = f"{prefix}{start_block}_{end_block}.parquet"
-    # buffer = io.BytesIO()
-    # merged_df.to_parquet(buffer, index=False)
-    # s3.put_object(Bucket=bucket_name, Key=s3_key, Body=buffer.getvalue())
-    # buffer.close()  # Avoid memory leak
-    # del buffer
+    
     with io.BytesIO() as buffer:
         merged_df.to_parquet(buffer, index=False)
         s3.put_object(Bucket=bucket_name, Key=s3_key, Body=buffer.getvalue())
@@ -215,15 +215,6 @@ def fetch_transform_store_block_trace(rpc_url, rpc_number, block_numbers, s3, bu
         combined_content = existing_content + "".join(new_data)
         del existing_content
         
-        # Compress and store the updated content back to S3
-        # buffer = BytesIO()
-        # with gzip.GzipFile(fileobj=buffer, mode='w') as gz:
-        #     gz.write(combined_content.encode('utf-8'))
-        # buffer.seek(0)
-        # s3.put_object(Bucket=bucket_name, Key=failed_blocks_key, Body=buffer.getvalue())
-        # buffer.close()  # Avoid memory leak
-        # del buffer  # Avoid memory leak
-        
         # Compress and store using context managers
         with io.BytesIO() as buffer:
             with gzip.GzipFile(fileobj=buffer, mode='w') as gz:
@@ -235,14 +226,7 @@ def fetch_transform_store_block_trace(rpc_url, rpc_number, block_numbers, s3, bu
 
 
     # Clean memory
-    del all_data
-    del failed_blocks
-    del transaction_agg
-    del opcode_agg
-    del df
     del merged_df
-    gc.collect()
-    
     return True, block_numbers
 
 # Multi thread fetch, transform and store block traces for batches of blocks instead of a single block at a time
@@ -255,6 +239,7 @@ def multi_thread_fetch_transform_store_block_trace(s3, bucket_name, prefix, rpc_
     with ThreadPoolExecutor(max_workers=15) as executor:
         future_to_blocks = {executor.submit(fetch_transform_store_block_trace, rpc_url, rpc_number, batch, s3, bucket_name, prefix): batch for batch in block_batches}
         for future in as_completed(future_to_blocks):
+            batch = future_to_blocks[future]
             try:
                 success, block_numbers = future.result(timeout=130)
                 if success:
@@ -262,10 +247,16 @@ def multi_thread_fetch_transform_store_block_trace(s3, bucket_name, prefix, rpc_
                 else:
                     logger.error(f"Failed to fetch and store blocks {min(block_numbers)} to {max(block_numbers)} with rpc {rpc_number}")
             except TimeoutError:
-                logger.error(f"TimeoutError for blocks {min(future_to_blocks[future])} to {max(future_to_blocks[future])} with rpc {rpc_number}")
+                logger.error(f"TimeoutError for blocks {min(batch)} to {max(batch)} with rpc {rpc_number}")
             except Exception as e:
-                logger.error(f"Exception occurred for blocks {min(future_to_blocks[future])} to {max(future_to_blocks[future])} with rpc {rpc_number}: {e}")
+                logger.error(f"Exception occurred for blocks {min(batch)} to {max(batch)} with rpc {rpc_number}: {e}")
+            finally: 
+                future.cancel()
+                del future
     
+    # Clean memory
+    del block_batches
+    del future_to_blocks
     garbage_collected = gc.collect()
     logger.info(f"Garbage collected: {garbage_collected}")
     end_time = time.time()
