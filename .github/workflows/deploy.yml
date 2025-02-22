@@ -34,7 +34,7 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: arb-opcodes
       run: |
-        tag=${{ 'rpc-1' }}
+        tag=${{ 'rpc-2' }}
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$tag .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$tag
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$tag" >> $GITHUB_ENV
