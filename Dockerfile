@@ -34,4 +34,4 @@ EXPOSE 80
 # Run the specified Python script with the given arguments when the container launches
 # python, main.py, run_strategy, start_block, end_block, batch_size, rpc_number
 # DONT FORGET TO CHANGE THE RPC NUMBER
-CMD ["python", "main.py", "historical", "64675328", "65675328", "150", "1"]
+CMD ["python", "main.py", "historical", "65675328", "66675328", "150", "0"]
