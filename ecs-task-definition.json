@@ -4,7 +4,7 @@
   "containerDefinitions": [
     {
       "name": "arb-opcodes",
-      "image": "796973488332.dkr.ecr.ap-southeast-2.amazonaws.com/arb-opcodes:rpc-1",
+      "image": "796973488332.dkr.ecr.ap-southeast-2.amazonaws.com/arb-opcodes:rpc-0",
       "secrets": [
         {
           "name": "RPC_URL_0",
